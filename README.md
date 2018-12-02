@@ -78,7 +78,7 @@ x-axis -> nagative z-axis(A rotation of 90 degrees around the Y axis)
  [0 1 0]
  [-sina 0 cosa]]
 ```
-**重要的矩阵储存在 ModelView 矩阵**
+*重要的矩阵储存在 ModelView 矩阵**
 
 **OpenGL保存一个相似的矩阵去描述camera type叫做PROJECTION_MATRIX**
 
