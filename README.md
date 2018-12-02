@@ -78,20 +78,10 @@ x-axis -> nagative z-axis(A rotation of 90 degrees around the Y axis)
  [0 1 0]
  [-sina 0 cosa]]
 ```
-*重要的矩阵储存在 ModelView 矩阵**
-
-**OpenGL保存一个相似的矩阵去描述camera type叫做PROJECTION_MATRIX**
-
-因为我们观察特定的model transformations 共享于多个模型之间，所以我们想避免连续reloading 相同sequence of transformations
-
-Model View matrix 对于OpenGL保存a stack of 矩阵
-
-`glPushMatrix()`push所有stack中的矩阵往下一个level，然后复制最上面的矩阵
-
-`glPopMatrix()`pop the matrix off the stack
-
-`glMatrixMode(GL_MODELVIEW)`
-
-
-
-
+**Setting up camera**
+创造一个matrix， transform points in world coordinates to camera coordinates.
+```
+gluLookAt(eyeX, eyeY, eyeZ,
+          lookX, lookY, lookZ,
+          upX, upY, upZ)
+```
