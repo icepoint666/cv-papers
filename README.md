@@ -1,1 +1,1 @@
-# GAN papers
+# CV papers
