@@ -51,4 +51,6 @@ bottle-neck就是指将信息压缩再放大的结构：自编码器以及squeez
 
 其实VAE的decoder就相当于GAN里的generator，所以就有了GAN+VAE结合的思路
 
-![](
+![](__pics/ae_gan.jpg)
+
+之后论文 ECCV2018的adaptive-style-aware 也就是这种AE+GAN的结构：https://arxiv.org/pdf/1807.10201.pdf
