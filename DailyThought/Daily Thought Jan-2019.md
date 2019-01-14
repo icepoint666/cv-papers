@@ -31,3 +31,24 @@ bottle-neck就是指将信息压缩再放大的结构：自编码器以及squeez
 所以理论上可以描述为：**图片是高维空间的低位流型**
 
 ### 3.GAN与VAE有什么关系和区别呢？（1.14）
+不说loss里，JS散度和KL散度上的区别
+
+主要说本质区别
+
+**VAE**: Variational AutoEncoder
+
+- 本质上：就是图片A encode 成为 latent vector 再 decode 成图片B
+- 监督策略：（loss）就是图片A类与图片B类之间差别作为监督（就是看折腾一下前后一样不一样呗）
+- 变分策略：variational变分具体就是指 encode 得到的latent vector经过高斯噪声（变化量）处理，为了防止前后生成都是一样的图片（就没有意义了），所以就是加一些变化。
+
+**GAN**: Generative Adversarial Network
+
+- 本质上：就是latent vector 通过 decoder(这里叫作generator) 生成 图片。
+- 监督策略：就是对抗监督，加入一个discriminator来协助监督，loss就是这样的一个对抗损失。
+- 变分策略：刚开始的latent vector就是由高斯分布生成的。
+
+那么我们其实发现**VAE的侧重点是AE，也就是 encoder + decoder**， **GAN的侧重点就是对抗策略**
+
+其实VAE的decoder就相当于GAN里的generator，所以就有了GAN+VAE结合的思路
+
+![](
