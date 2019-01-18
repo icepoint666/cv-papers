@@ -83,4 +83,6 @@ skip connection是由resnet里面提出的
 
 很明显，ResNet和DenseNet都走了两个极端—一个只逐元素加“+”，一个只做拼接“||”。于是一个混合它们来提升的思路就非常显而易见了，mixnet就是两者融合了。
 
+![](__pics/mixnet.jpg)
+
 关于mixnet：https://zhuanlan.zhihu.com/p/33634915
