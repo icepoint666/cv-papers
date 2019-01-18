@@ -54,3 +54,33 @@ bottle-neck就是指将信息压缩再放大的结构：自编码器以及squeez
 ![](__pics/ae-gan.jpg)
 
 之后论文 ECCV2018的adaptive-style-aware 也就是这种AE+GAN的结构：https://arxiv.org/pdf/1807.10201.pdf
+
+### 4.U-net网络结构 （1.18）
+U-net与FCN差不多，区别就是
+- 1.u-net是完全对称的，下采样与上采样一样的结构
+- 2.u-net是skip connection的结构, FCN是也是skip connection的结构, 区别就是:
+  - FCN用的是加操作summation
+  - u-net用的是叠操作concatnation
+
+关于U-net/FCN的思考：
+
+U-Net和FCN为什么成功，因为它相当于给了一个网络的框架，具体用什么特征提取器，随便。这个时候，高引就出现了，各种在encoder上的微创新络绎不绝，最直接的就是用ImageNet里面的明星结构来套嘛，前几年的BottleNeck，Residual，还有去年的DenseNet，就比谁出文章快。这一类的论文就相当于从1到10的递进，而U-Net这个低层结构的提出却是从0到1。说句题外话，像这种从1到10的论文，引用往往不会比从0到1的论文高，因为它不自觉的局限了自己的扩展空间
+
+U-net详细研习：https://zhuanlan.zhihu.com/p/44958351
+
+### 5.skip-connection结构（1.18）
+skip-connection属于**拓扑结构**的范畴
+
+skip connection是由resnet里面提出的
+
+关于resnet，densenet其中都涉及到了**dense topology**的观点
+
+![](__pics/topology.jpg)
+
+表面上resnet是一种简单的skip connection结构，但是《Mixed Link Networks》这篇论文推导证明了ResNet本质上也是一种Dense的密集拓扑连接。
+
+换句话说，DenseNet并没有提出新的拓扑连接模式，它和ResNet唯一的区别就是：在一个相同的“Dense Topology”的基础上，ResNet使用了element-wise addition来连接，而DenseNet则使用了concatenation来连接。
+
+很明显，ResNet和DenseNet都走了两个极端—一个只逐元素加“+”，一个只做拼接“||”。于是一个混合它们来提升的思路就非常显而易见了，mixnet就是两者融合了。
+
+关于mixnet：https://zhuanlan.zhihu.com/p/33634915
