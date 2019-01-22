@@ -151,6 +151,8 @@ Deep CNN网络中**up-sampling和pooling**的致命缺陷：
 ### 10.空洞卷积（DilatedConv）（1.22）
 **空洞卷积（dilated convolution）**：标准的convolution map里注入空洞，以此来增加reception field
 
+**优点： dilated convolution有保留内部数据结构同时避免使用 down-sampling 这样的特性**
+
 多了一个超参数 dilation rate，就是值kernel的间隔数量，普通卷积的dilation rate = 1
 
 对比如下：
@@ -173,5 +175,50 @@ Deep CNN网络中**up-sampling和pooling**的致命缺陷：
 
 dilated的好处是不做pooling损失信息的情况下，加大了感受野，让每个卷积输出都包含较大范围的信息。在图像需要全局信息或者语音文本需要较长的sequence信息依赖的问题中，都能很好的应用dilated conv，比如图像分割[3]、语音合成WaveNet[2]、机器翻译ByteNet[1]中
 
-
 参考：https://www.zhihu.com/question/54149221/answer/323880412
+
+### 11.逆卷积（DeConv）与空洞卷积（DilatedConv）
+
+- deconv的其中一个用途是做upsampling，即增大图像尺寸。
+- dilated conv并不是做upsampling，而是增大感受野。
+
+可以形象的做个解释：对于标准的`k*k`卷积操作，stride为s，分三种情况：
+- (1) s>1，即卷积的同时做了downsampling，卷积后图像尺寸减小；
+- (2) s=1，普通的步长为1的卷积，比如在tensorflow中设置padding=SAME的话，卷积的图像输入和输出有相同的尺寸大小；
+- (3) 0<s<1，fractionally strided convolution，相当于对图像做upsampling。比如s=0.5时，意味着在图像每个像素之间padding一个空白的像素后，stride改为1做卷积，得到的feature map尺寸增大一倍。
+
+而dilated conv不是在像素之间padding空白的像素，而是在已有的像素上，skip掉一些像素，或者输入不变，对conv的kernel参数中插一些0的weight，达到一次卷积看到的空间范围变大的目的。
+
+当然将普通的卷积stride步长设为大于1，也会达到增加感受野的效果，但是stride大于1就会导致downsampling，图像尺寸变小。
+
+所以dilated conv就是增大感受野，但是没有downsampling/upsampling。
+
+可以理解到理解到deconv，dilated conv，pooling/downsampling，upsampling之间的联系与区别
+
+### 12.空洞卷积的潜在问题（1.22）
+**潜在问题 1：The Gridding Effect**
+
+假设我们仅仅多次叠加 dilation rate = 2 的 3 x 3 kernel 的话，则会出现这个问题：
+
+kernel 并不连续，也就是并不是所有的 pixel 都用来计算了，这样会损失信息的连续性。这对 pixel-level dense prediction 的任务来说是致命的。
+ 
+![](__pics/dilated-conv-4.jpg)
+
+**潜在问题 2：Long-ranged information might be not relevant.**
+
+从dilated convolution 的设计背景推测出这样的设计是用来获取 long-ranged information。然而光采用大 dilation rate 的信息或许只对一些大物体分割有效果，而对小物体来说可能则有弊无利了。如何同时处理不同大小的物体的关系，则是设计好 dilated convolution 网络的关键。
+
+解决：**Hybrid Dilated Convolution (HDC) 设计结构**
+
+- 第一个特性是，叠加卷积的 dilation rate 不能有大于1的公约数。比如 [2, 4, 6] 则不是一个好的三层卷积，依然会出现 gridding effect。
+- 第二个特性是，我们将 dilation rate 设计成 锯齿状结构，例如 [1, 2, 5, 1, 2, 5] 循环结构。
+- 第三个特性是，我们需要满足一下这个式子：
+
+![](__pics/dilated-conv-5.png)
+
+一个简单的例子: dilation rate [1, 2, 5] with 3 x 3 kernel (可行的方案):
+
+![](__pics/dilated-conv-6.jpg)
+
+而这样的锯齿状本身的性质就比较好的来同时满足小物体大物体的分割要求(小 dilation rate 来关心近距离信息，大 dilation rate 来关心远距离信息)。这样我们的卷积依然是连续的也就依然能满足VGG组观察的结论，大卷积是由小卷积的 regularization 的 叠加。
+
