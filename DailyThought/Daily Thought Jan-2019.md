@@ -87,7 +87,7 @@ skip connection是由resnet里面提出的
 
 关于mixnet：https://zhuanlan.zhihu.com/p/33634915
 
-### 6.Resnet的直觉理解
+### 6.Resnet的直觉理解（1.19）
 **残差网络是用来解决什么问题？，残差网络为什么这样设计，与传统网络区别在哪？**
 - 传统网络，网络输入是x，网络的输出是F(x)，网络要拟合的目标是H(x)，传统网络的训练目标是F(x)=H(x)。
 
@@ -107,7 +107,7 @@ skip connection是由resnet里面提出的
 
 参考：https://www.zhihu.com/question/53224378/answer/343061012
 
-### 7.Resnet目的
+### 7.Resnet目的 （1.20）
 直觉上我们得出结论：增加网络深度后，网络可以进行更加复杂的特征提取，因此更深的模型可以取得更好的结果。
 
 事实并非如此，人们发现随着网络深度的增加，模型精度并不总是提升，并且这个问题显然不是由过拟合（overfitting）造成的，因为**网络加深后不仅测试误差变高了，它的训练误差竟然也变高了**。
@@ -121,3 +121,57 @@ skip connection是由resnet里面提出的
 本质是**密集拓扑结构**
 
 参考：https://zhuanlan.zhihu.com/p/54289848
+
+### 8.VGG的精妙之处（1.22）
+VGG最大的贡献并不是VGG网络本身，而是他对于卷积叠加的一个巧妙观察。
+
+**小卷积核**
+
+7 x 7 的卷积层的正则等效于 3 个 3 x 3 的卷积层的叠加。而这样的设计**不仅可以大幅度的减少参数**，其本身带有正则性质的 convolution map 能够**更容易学一个 generlisable, expressive feature space**。这也是现在绝大部分基于卷积的深层网络都在用小卷积核的原因。
+
+![](__pics/vgg-1.jpg)
+
+### 9.空洞卷积思路提出基础（1.22）
+
+Deep CNN网络中**up-sampling和pooling**的致命缺陷：
+
+主要问题有：
+
+- 1. Up-sampling / pooling layer (e.g. bilinear interpolation) is deterministic（确定的）. (a.k.a. not learnable，不是学习的)
+- 2. 内部数据结构丢失；空间层级化信息丢失。
+- 3. 小物体信息无法重建 (假设有四个pooling layer 则 任何小于 2^4 = 16 pixel 的物体信息将理论上无法重建。)
+
+在语义分割领域，图像输入到CNN（典型的网络比如FCN）中，FCN先像传统的CNN那样对图像做卷积再pooling，降低图像尺寸的同时增大感受野，但是由于图像分割预测是pixel-wise的输出，所以要将pooling后较小的图像尺寸upsampling（一般采用deconv反卷积）到原始的图像尺寸进行预测。之前的pooling操作使得每个pixel预测都能看到较大感受野信息。
+
+**因此图像分割FCN中有两个关键，一个是pooling减小图像尺寸增大感受野，另一个是upsampling扩大图像尺寸。**
+
+先减小再增大尺寸的过程中，肯定有一些信息损失掉了，所以语义分割问题一直处在瓶颈期无法再明显提高精度。那么能不能设计一种新的操作，不通过pooling也能有较大的感受野看到更多的信息呢？dilated convolution 的设计就很好的解决了这个问题。
+
+
+### 10.空洞卷积（DilatedConv）（1.22）
+**空洞卷积（dilated convolution）**：标准的convolution map里注入空洞，以此来增加reception field
+
+多了一个超参数 dilation rate，就是值kernel的间隔数量，普通卷积的dilation rate = 1
+
+对比如下：
+
+![](__pics/dilated-conv-1.gif)
+
+![](__pics/dilated-conv-2.gif)
+
+下图（a）：3 × 3， dilation rate = 1, (1-dilated conv)与普通卷积操作一样。
+
+下图（b）：3 × 3， dilation rate = 2, (2-dilated conv)空洞为1，如果考虑到前一层是1-dilated conv，这一层是2-dilated conv，那么两层结合在一起感受野就达到了7 × 7
+
+下图（c）：3 × 3， dilation rate = 4, (4-dilated conv)空洞为3，同理跟在一层1-dilated conv + 一层2-dilated conv后面，能达到15 × 15的感受野。
+
+3层普通的3 × 3空洞卷积加起来，stride为1，感受野只能达到7 × 7
+
+3层3 × 3的空洞卷积加起来，stride为1，感受野可以达到15 × 15
+
+![](__pics/dilated-conv-3.png)
+
+dilated的好处是不做pooling损失信息的情况下，加大了感受野，让每个卷积输出都包含较大范围的信息。在图像需要全局信息或者语音文本需要较长的sequence信息依赖的问题中，都能很好的应用dilated conv，比如图像分割[3]、语音合成WaveNet[2]、机器翻译ByteNet[1]中
+
+
+参考：https://www.zhihu.com/question/54149221/answer/323880412
