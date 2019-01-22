@@ -222,3 +222,24 @@ kernel 并不连续，也就是并不是所有的 pixel 都用来计算了，这
 
 而这样的锯齿状本身的性质就比较好的来同时满足小物体大物体的分割要求(小 dilation rate 来关心近距离信息，大 dilation rate 来关心远距离信息)。这样我们的卷积依然是连续的也就依然能满足VGG组观察的结论，大卷积是由小卷积的 regularization 的 叠加。
 
+### 13.为什么深度网络要采用unstrided convolution + max pooling的结构来Downsampling
+**问题1：如果只用conv-layer会怎么样？**
+- 过于执着局部特征学习，忽视全局
+  - 经过三层conv-layer 3x3 filter后，我们相当于只用了一层conv-layer 7x7 filter来扫描原图
+  - 对原图整体状态信息学习较少
+  - 从底层细小局部简单的特征到高层复杂全局性更高的特征，推进速度太慢
+- 计算量仍旧太大
+  - 相比而言pooling layer的参数量就大幅下降
+
+**问题2：为什么使用pooling layer？**
+- 大幅降低参数量，降低计算量
+- pooling通过多层conv-layer，相当于间接用更大的filter扫描全图
+
+**问题3：为什么max-pooling要优于strided convolution和average-pooling?**
+- strided convolution的弊端
+  - 容易overlook忽视或者丢失细节数据
+  - 跳格平移 **（待搞懂）**
+- average pooling的弊端
+  - 取均值，容易造成稀释特征程度效果的问题
+
+**所以最佳downsampling方案：unstrided conv + max pooling**
