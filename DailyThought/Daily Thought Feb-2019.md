@@ -55,3 +55,25 @@ UNet的encoder下采样4次，一共下采样16倍，对称地，其decoder也�
 同时，模态也可以有非常广泛的定义，比如我们可以把两种不同的语言当做是两种模态，甚至在两种不同情况下采集到的数据集，亦可认为是两种模态。
 
 https://www.zhihu.com/question/269914775/answer/586501606
+
+### 3.目标检测基础 Faster-RCNN
+Faster-RCNN主要分为四个部分
+- 1. Conv layers。作为一种CNN网络目标检测方法，Faster RCNN首先使用一组基础的conv+relu+pooling层提取image的feature maps。该feature maps被共享用于后续RPN层和全连接层。
+- 2. Region Proposal Networks。RPN网络用于生成region proposals。该层通过softmax判断anchors属于foreground或者background，再利用bounding box regression修正anchors获得精确的proposals。
+- 3. Roi Pooling。该层收集输入的feature maps和proposals，综合这些信息后提取proposal feature maps，送入后续全连接层判定目标类别。
+- 4. Classification。利用proposal feature maps计算proposal的类别，同时再次bounding box regression获得检测框最终的精确位置。
+![](__pics/faster_rcnn_1.jpg)
+
+**整体结构：**
+`pascal_voc/VGG16/faster_rcnn模型`
+1. 网络对于一副任意大小PxQ的图像，首先缩放至固定大小MxN，然后将MxN图像送入网络；
+2. `Conv layers`中包含了13个conv层+13个relu层+4个pooling层
+3. `RPN网络`首先经过3x3卷积，再分别生成foreground anchors与bounding box regression偏移量，然后计算出proposals
+4. `Roi Pooling层`则利用proposals从feature maps中提取proposal feature
+5. 将proposal feature送入后续全连接和softmax网络作classification（即分类proposal到底是什么object）。
+
+![](__pics/faster_rcnn_2.jpg)
+
+https://zhuanlan.zhihu.com/p/31426458
+
+### 4.RPN网络(Region Proposal Networks)
