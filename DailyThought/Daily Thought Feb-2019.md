@@ -157,3 +157,30 @@ Rol pooling层有2个输入：
 这样处理后，即使大小不同的proposal输出结果都是pooled_w × pooled_h 固定大小，实现了固定长度输出。
 
 ![](__pics/roi_pooling_2.jpg)
+
+### 6.Deformable ConvNet v1 （DCN v1）
+目标检测中有一个比较棘手的问题，即所谓的**几何形变问题（Geometric variations）**。就拿人检测来讲，人的姿态有多种多样（想想跳舞的场景），这就需要我们设计的模型具备deformation的能力。通常情况下为了解决这类问题有两种思路：
+
+（a) 收集更多样的数据用于模型的训练；
+
+（b) 设计transformation invariant 的特征来提升模型多样化能力。
+
+Deform ConvNet是在卷积神经网络的框架下，对transformation-invariant feature的比较成功的尝试。思想非常直观，在标准的卷积核上加入了可学习的offset，使得原来方方正正的卷积核具备了形变的能力。
+
+https://www.zhihu.com/question/303900394/answer/540818451
+
+### 7.Deformable ConvNet v2
+我认为，Deform ConvNet是在解决如何让学到的offset能更聚焦到感兴趣的物体上边，也就是提取到更聚焦的feature来帮助物体的识别定位。在下边的图片中，我们当然希望模型的feature能够聚焦到物体上边，这样才能提取到更有意义的supporting feature。
+
+为了做到这一点，作者主要用了几种策略:
+
+(a) 增加更多的offset层，这个不必细说；
+
+(b) 在deform convolution中引入调节项(modulation)，这样既学到了offset，又有了每个位置的重要性信息
+
+![](__pics/DCN_v2.jpg)
+
+(c) Feature Mimicking:
+作者强调，简单在对应的feature上用roi-pooling来提取对应位置的feature并不一定能提取到最有用的信息（可能包含无用的context）。如何才能让feature更加聚焦到物体上呢？解决就是Mimicking技术，让roi-pooling之后的feature更像直接用R-CNN学到的feature。
+
+https://www.zhihu.com/question/303900394/answer/540896238
