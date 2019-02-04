@@ -31,7 +31,7 @@ https://github.com/SherlockLiao/mxtorch
 
 https://zhuanlan.zhihu.com/p/31424275
 
-### 2.Unet为什么在医学图像分割表现好
+### 2.Unet为什么在医学图像分割表现好（2.3）
 **Unet两大特点**：U型结构 与 skip-connection
 
 UNet的encoder下采样4次，一共下采样16倍，对称地，其decoder也相应上采样4次，将encoder得到的高级语义特征图恢复到原图片的分辨率。
@@ -56,7 +56,7 @@ UNet的encoder下采样4次，一共下采样16倍，对称地，其decoder也�
 
 https://www.zhihu.com/question/269914775/answer/586501606
 
-### 3.目标检测基础 Faster-RCNN
+### 3.目标检测基础 Faster-RCNN（2.4）
 Faster-RCNN主要分为四个部分
 - 1. Conv layers。作为一种CNN网络目标检测方法，Faster RCNN首先使用一组基础的conv+relu+pooling层提取image的feature maps。该feature maps被共享用于后续RPN层和全连接层。
 - 2. Region Proposal Networks。RPN网络用于生成region proposals。该层通过softmax判断anchors属于foreground或者background，再利用bounding box regression修正anchors获得精确的proposals。
@@ -74,6 +74,58 @@ Faster-RCNN主要分为四个部分
 
 ![](__pics/faster_rcnn_2.jpg)
 
+详细理解链接：
 https://zhuanlan.zhihu.com/p/31426458
 
-### 4.RPN网络(Region Proposal Networks)
+### 4.RPN网络(Region Proposal Networks)(2.4)
+**RPN具体结构**
+![](__pics/rpn_1.jpg)
+- 上面一条通过softmax分类anchors获得foreground和background（检测目标是foreground）
+- 下面一条用于计算对于anchors的bounding box regression偏移量，以获得精确的proposal
+- 最后的Proposal层则负责综合foreground anchors和bounding box regression偏移量获取proposals，同时剔除太小和超出边界的proposals
+
+整个faster-rcnn到proposal layer这里，其实基本上相当于完成了目标定位的功能。
+
+**ancher基本含义**
+![](__pics/rpn_2.jpg)
+
+输入图像reshape成800x600（即图2中的M=800，N=600）。再回头来看anchors的大小，anchors中长宽1:2中最大为352x704，长宽2:1中最大736x384，基本是cover了800x600的各个尺度和形状。
+
+那么这9个anchors是做什么的呢？借用Faster RCNN论文中的原图，遍历Conv layers计算获得的feature maps，为每一个点都配备这9种anchors作为初始的检测框。这样做获得检测框很不准确，不用担心，后面还有2次bounding box regression可以修正检测框位置。
+
+那么Anchor一共有多少个？原图800x600，VGG下采样16倍，feature map每个点设置9个Anchor，所以：
+`ceil(800/16) × ceil(600/16) × 9 = 17100`
+
+**rpn步骤**
+
+step0: 前面的conv-layers中最后的conv5是num_output=256，对应生成256张feature maps
+
+step1: 在conv5之后，做了rpn_conv/3x3卷积且num_output=256，相当于每个点又融合了周围3x3的空间信息,当然得到的还是256维feature maps
+
+step2.1: 假设在conv5 feature maps中每个点上有k个anchor（默认k=9），而每个anchor要分foreground和background,也就是二分类，所以每个点由256维 feature转化为cls=2k scores。也就是其中一个分支每个spatial点从256维经过1×1卷积得到18维。
+
+step2.2: 而每个anchor都有(x, y, w, h)对应4个偏移量，所以reg=4k coordinates, 也就是每个spatial点从256维经过1×1卷积得到36维。
+
+（训练时：全部anchors拿去训练太多了，训练程序会在合适的anchors中随机选取128个postive anchors+128个negative anchors进行训练）
+
+![](__pics/rpn_3.jpg)
+
+**其实RPN最终就是在原图尺度上，设置了密密麻麻的候选Anchor。然后用cnn去判断哪些Anchor是里面有目标的foreground anchor，哪些是没目标的backgroud。所以，仅仅是个二分类而已！**
+
+第二条线路（step2.2）是bounding box regression
+
+![](__pics/rpn_4.jpg)
+
+如图所示绿色框为飞机的Ground Truth(GT)，红色为提取的foreground anchors，即便红色的框被分类器识别为飞机，但是由于红色的框定位不准，这张图相当于没有正确的检测出飞机。所以我们希望采用一种方法对红色的框进行微调，使得foreground anchors和GT更加接近
+
+对于窗口一般使用四维向量  (x, y, w, h) 表示，分别表示窗口的中心点坐标和宽高。对于图 11，红色的框A代表原始的Foreground Anchors，绿色的框G代表目标的GT，我们的目标是寻找一种关系，使得输入原始的anchor A经过映射得到一个跟真实窗口G更接近的回归窗口G'，即：
+
+给定：anchor A=(Ax, Ay, Aw, Ah) 和 GT= [Gx, Gy, Gw, Gh]
+
+寻找一种变换F，使得：F(Ax, Ay, Aw, Ah)=(G`x, G`y, G`w, G`h)，其中(G`x, G`y, G`w, G`h)≈(Gx, Gy, Gw, Gh)
+
+那么经过何种变换F才能从图10中的anchor A变为G'呢？ 比较简单的思路就是先做平移，再做缩放。
+
+anchor A与GT相差较小时，可以认为这种变换是一种线性变换， 那么就可以用线性回归来建模对窗口进行微调
+
+step3. proposal layer：负责综合所有[dx(A),dy(A),dw(A),dh(A)]变换量和foreground anchors，计算出精准的proposal，送入后续RoI Pooling Layer
