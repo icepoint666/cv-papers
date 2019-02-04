@@ -93,8 +93,9 @@ https://zhuanlan.zhihu.com/p/31426458
 
 那么这9个anchors是做什么的呢？借用Faster RCNN论文中的原图，遍历Conv layers计算获得的feature maps，为每一个点都配备这9种anchors作为初始的检测框。这样做获得检测框很不准确，不用担心，后面还有2次bounding box regression可以修正检测框位置。
 
-那么Anchor一共有多少个？原图800x600，VGG下采样16倍，feature map每个点设置9个Anchor，所以：
-`ceil(800/16) × ceil(600/16) × 9 = 17100`
+那么Anchor一共有多少个？原图800x600，VGG下采样16倍，feature map每个点设置9个Anchor，
+
+所以：`ceil(800/16) × ceil(600/16) × 9 = 17100`
 
 **rpn步骤**
 
@@ -122,10 +123,37 @@ step2.2: 而每个anchor都有(x, y, w, h)对应4个偏移量，所以reg=4k coo
 
 给定：anchor A=(Ax, Ay, Aw, Ah) 和 GT= [Gx, Gy, Gw, Gh]
 
-寻找一种变换F，使得：F(Ax, Ay, Aw, Ah)=(G`x, G`y, G`w, G`h)，其中(G`x, G`y, G`w, G`h)≈(Gx, Gy, Gw, Gh)
+寻找一种变换F，使得：F(Ax, Ay, Aw, Ah)=(G\`x, G\`y, G\`w, G\`h)，其中(G\`x, G\`y, G\`w, G\`h)≈(Gx, Gy, Gw, Gh)
 
 那么经过何种变换F才能从图10中的anchor A变为G'呢？ 比较简单的思路就是先做平移，再做缩放。
 
 anchor A与GT相差较小时，可以认为这种变换是一种线性变换， 那么就可以用线性回归来建模对窗口进行微调
 
 step3. proposal layer：负责综合所有[dx(A),dy(A),dw(A),dh(A)]变换量和foreground anchors，计算出精准的proposal，送入后续RoI Pooling Layer
+
+### 5.RoI pooling层
+RoI Pooling层则负责收集proposal，并计算出proposal feature maps，送入后续网络。
+
+Rol pooling层有2个输入：
+- 原始的feature maps
+- RPN输出的proposal boxes（大小各不相同）
+
+对于传统的CNN（如AlexNet，VGG），当网络训练好后输入的图像尺寸必须是固定值，同时网络输出也是固定大小的vector or matrix。如果输入图像大小不定，这个问题就变得比较麻烦。有2种解决办法：
+
+1. 从图像中crop一部分传入网络
+
+2. 将图像warp成需要的大小后传入网络
+
+![](__pics/roi_pooling_1.jpg)
+
+可以看到无论采取那种办法都不好，要么crop后破坏了图像的完整结构，要么warp破坏了图像原始形状信息。
+
+**RoI Pooling layer forward过程：**
+
+由于proposal是对应 M×N 尺度的，所以首先使用spatial_scale参数将其映射回 (M/16)×(N/16) 大小的feature map尺度；
+再将每个proposal对应的feature map区域水平分为pooled_w × pooled_h 的网格；
+
+对网格的每一份都进行max pooling处理。
+这样处理后，即使大小不同的proposal输出结果都是pooled_w × pooled_h 固定大小，实现了固定长度输出。
+
+![](__pics/roi_pooling_2.jpg)
