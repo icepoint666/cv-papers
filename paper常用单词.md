@@ -808,3 +808,5 @@ borne 推动；传达；承载
 brood 沉思；焦虑的思考
 
 imply 暗示；意味着
+
+https://zhuanlan.zhihu.com/p/58860096
